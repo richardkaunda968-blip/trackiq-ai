@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-accent="blue">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackIQ</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/pages/auth.css">
+  <link rel="stylesheet" href="css/pages/home.css">
+  <link rel="stylesheet" href="css/pages/courses.css">
+  <link rel="stylesheet" href="css/pages/library.css">
+  <link rel="stylesheet" href="css/pages/activity.css">
+  <link rel="stylesheet" href="css/pages/milestones.css">
+  <link rel="stylesheet" href="css/pages/settings.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+  <base target="_blank">
+</head>
+<body>
+  <div class="iq-badge" id="iqBadge">
+    <div class="badge-avatar" id="badgeAvatar">S</div>
+    <div class="badge-info">
+      <span class="badge-name" id="badgeName">Student</span>
+      <span class="badge-level" id="badgeLevel">Lv. 1</span>
+      <span class="badge-xp" id="badgeXP">0 XP</span>
+    </div>
+    <div class="profile-popup hidden" id="profilePopup">
+      <div class="popup-avatar" id="popupAvatar"></div>
+      <div class="popup-name" id="popupName">Student</div>
+      <div class="popup-level" id="popupLevel">Level 1</div>
+      <div class="popup-stats">
+        <div class="popup-stat">
+          <span class="popup-stat-value" id="popupCourses">0</span>
+          <span class="popup-stat-label">Courses</span>
+        </div>
+        <div class="popup-stat">
+          <span class="popup-stat-value" id="popupSessions">0</span>
+          <span class="popup-stat-label">Sessions</span>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm btn-block" id="popupEditProfile">Edit Profile</button>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="modal-overlay hidden" id="logoutModal">
+    <div class="logout-modal-card">
+      <div class="logout-icon">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="12" width="32" height="40" rx="4" fill="none" stroke="currentColor" stroke-width="3"/>
+          <rect x="12" y="16" width="20" height="32" rx="2" fill="currentColor" opacity="0.15"/>
+          <path d="M28 32h20M44 32l-8-8M44 32l-8 8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h3>Oh no! You're leaving...</h3>
+      <p>Are you sure?</p>
+      <div class="logout-actions">
+        <button class="btn btn-primary btn-block" id="cancelLogout">Naah, Just Kidding</button>
+        <button class="btn btn-outline btn-block" id="confirmLogout">Yes, Log Me Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-auth">
+    <div class="auth-container">
+      <div class="auth-logo">
+        <svg class="trackiq-logo" viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="85" width="100" height="4" rx="2" fill="currentColor" opacity="0.3"/>
+          <rect x="18" y="58" width="16" height="27" rx="2" fill="currentColor"/>
+          <rect x="42" y="38" width="16" height="47" rx="2" fill="currentColor"/>
+          <rect x="66" y="22" width="16" height="63" rx="2" fill="currentColor"/>
+          <rect x="90" y="6" width="16" height="79" rx="2" fill="currentColor"/>
+        </svg>
+        <h1>TrackIQ</h1>
+      </div>
+      <div class="auth-card">
+        <h2 id="authTitle">Welcome Back</h2>
+        <p id="authSubtitle">Sign in to continue tracking</p>
+        <form id="authForm">
+          <div class="form-group hidden" id="nameGroup">
+            <label>Display Name</label>
+            <input type="text" id="displayName" placeholder="Your name">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="authEmail" placeholder="you@email.com" required>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="authPassword" placeholder="••••••••" required>
+          </div>
+          <div class="form-group hidden" id="confirmGroup">
+            <label>Confirm Password</label>
+            <input type="password" id="confirmPassword" placeholder="••••••••">
+          </div>
+          <div class="form-group remember-group hidden" id="rememberGroup">
+            <label class="checkbox-label">
+              <input type="checkbox" id="rememberMe" checked>
+              <span class="checkmark"></span>
+              Remember me
+            </label>
+          </div>
+          <p class="error-text" id="authError"></p>
+          <button type="submit" class="btn btn-primary btn-block" id="authSubmitBtn">
+            <span class="btn-text">Sign In</span>
+            <span class="btn-loader hidden"></span>
+          </button>
+        </form>
+        <p class="auth-toggle">
+          <span id="authToggleText">Don't have an account?</span>
+          <button class="btn-link" id="authToggleBtn">Sign Up</button>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-shell hidden" id="appShell">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <svg class="trackiq-logo" viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="85" width="100" height="4" rx="2" fill="currentColor" opacity="0.3"/>
+          <rect x="18" y="58" width="16" height="27" rx="2" fill="currentColor"/>
+          <rect x="42" y="38" width="16" height="47" rx="2" fill="currentColor"/>
+          <rect x="66" y="22" width="16" height="63" rx="2" fill="currentColor"/>
+          <rect x="90" y="6" width="16" height="79" rx="2" fill="currentColor"/>
+        </svg>
+        <span class="logo-text">TrackIQ</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#/home" class="nav-link active" data-page="home">
+          <span>&#127968;</span> Home
+        </a>
+        <a href="#/courses" class="nav-link" data-page="courses">
+          <span>&#128218;</span> Courses
+        </a>
+        <a href="#/library" class="nav-link" data-page="library">
+          <span>&#128214;</span> Library
+        </a>
+        <a href="#/activity" class="nav-link" data-page="activity">
+          <span>&#128200;</span> Activity
+        </a>
+        <a href="#/milestones" class="nav-link" data-page="milestones">
+          <span>&#127942;</span> Milestones
+        </a>
+        <a href="#/settings" class="nav-link" data-page="settings">
+          <span>&#9881;</span> Settings
+        </a>
+      </nav>
+    </aside>
+
+    <main class="app-main" id="appMain">
+
+      <div class="page hidden" id="page-home">
+        <header class="page-header">
+          <h1>Dashboard</h1>
+          <p id="homeSubtitle">Your study overview</p>
+        </header>
+
+        <!-- STUDY TIPS: Moved to top, right below greeting -->
+        <div class="home-section study-tips-top">
+          <h3>Study Tips</h3>
+          <div id="studyTipsContainer"></div>
+        </div>
+
+        <div class="home-grid">
+          <div class="stats-row">
+            <div class="stat-card">
+              <span class="stat-icon">&#9201;</span>
+              <span class="stat-value" id="totalStudyTime">0h</span>
+              <span class="stat-label">Total Study Time</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-icon">&#128218;</span>
+              <span class="stat-value" id="activeCoursesCount">0</span>
+              <span class="stat-label">Active Courses</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-icon">&#128293;</span>
+              <span class="stat-value" id="dayStreak">0</span>
+              <span class="stat-label">Day Streak</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-icon">&#11088;</span>
+              <span class="stat-value" id="totalXP">0</span>
+              <span class="stat-label">Total XP</span>
+            </div>
+          </div>
+
+          <div class="home-section">
+            <div class="progress-header">
+              <h3>Weekly Progress</h3>
+              <span id="weeklyTrend" class="trend-neutral">No previous data</span>
+            </div>
+            <div class="progress-ring-container" id="weeklyProgressRing"></div>
+          </div>
+
+          <div class="home-section">
+            <div class="planner-header">
+              <h3>Planner</h3>
+              <button class="btn btn-primary btn-sm" id="plannerAddBtn">+ Add Study Block</button>
+            </div>
+
+            <div class="planner-overlay hidden" id="plannerOverlay">
+              <div class="planner-overlay-backdrop" id="plannerOverlayBackdrop"></div>
+              <div class="planner-overlay-panel">
+                <div class="planner-overlay-header">
+                  <h4>Plan a Study Block</h4>
+                  <button class="btn btn-icon" id="plannerOverlayClose">&#10005;</button>
+                </div>
+                <form id="plannerForm" class="planner-form">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label>Course</label>
+                      <select id="plannerCourse" required>
+                        <option value="">Select Course</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Topic</label>
+                      <select id="plannerTopic" disabled required>
+                        <option value="">Select Topic</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label>Day</label>
+                      <select id="plannerDay" required>
+                        <option value="monday">Monday</option>
+                        <option value="tuesday">Tuesday</option>
+                        <option value="wednesday">Wednesday</option>
+                        <option value="thursday">Thursday</option>
+                        <option value="friday">Friday</option>
+                        <option value="saturday">Saturday</option>
+                        <option value="sunday">Sunday</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Start Time</label>
+                      <input type="time" id="plannerStartTime" required>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label>Duration</label>
+                      <div class="duration-inputs">
+                        <input type="number" id="plannerDurationHours" placeholder="Hrs" min="0" max="12" value="1">
+                        <span>h</span>
+                        <input type="number" id="plannerDurationMinutes" placeholder="Min" min="0" max="59" value="0">
+                        <span>m</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="planner-overlay-actions">
+                    <button type="button" class="btn btn-secondary" id="plannerOverlayCancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Study Block</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <div id="plannerContainer">
+              <p class="empty-state">No study blocks planned. Add one above!</p>
+            </div>
+          </div>
+
+          <!-- Study Tips removed from here — moved to top below greeting -->
+        </div>
+      </div>
+
+      <div class="page hidden" id="page-courses">
+        <header class="page-header">
+          <h1>Courses</h1>
+          <p id="coursesSubtitle">Manage your subjects and topics</p>
+        </header>
+        <div class="courses-layout">
+          <div class="course-form-card">
+            <h3>Create Course</h3>
+            <form id="courseForm">
+              <div class="form-group">
+                <label>Course Name</label>
+                <input type="text" id="courseName" placeholder="e.g. Mathematics" required>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary" id="courseSubmitBtn">Create Course</button>
+                <button type="button" class="btn btn-secondary hidden" id="cancelCourseBtn">Cancel</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="courses-list" id="coursesList">
+            <p class="empty-state">No courses yet. Create your first one above!</p>
+          </div>
+
+          <div class="topic-panel hidden" id="topicPanel">
+            <div class="topic-panel-header">
+              <h3 id="topicPanelCourseTitle">Course Topics</h3>
+              <button class="btn btn-icon" id="closeTopicPanel">&#10005;</button>
+            </div>
+            <div class="topic-form-card">
+              <h4>Add Topic</h4>
+              <form id="topicForm">
+                <div class="form-group">
+                  <label>Topic Name</label>
+                  <input type="text" id="topicName" placeholder="e.g. Matrices" required>
+                </div>
+                <div class="form-group">
+                  <label>Target Study Hours</label>
+                  <input type="number" id="topicTargetHours" placeholder="e.g. 3" min="0.5" step="0.5" value="3" required>
+                </div>
+                <div class="form-group">
+                  <label>Resources (PDF, Image)</label>
+                  <input type="file" id="topicResources" accept=".pdf,image/*,.doc,.docx" multiple>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary" id="topicSubmitBtn">Create Topic</button>
+                  <button type="button" class="btn btn-secondary hidden" id="cancelTopicBtn">Cancel</button>
+                </div>
+              </form>
+            </div>
+            <div class="topics-list" id="topicsList">
+              <p class="empty-state">No topics yet. Create your first topic above!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page hidden" id="page-library">
+        <header class="page-header">
+          <h1>Library</h1>
+          <p id="librarySubtitle">Select a course to study</p>
+          <p id="libraryBreadcrumb" class="hidden"></p>
+        </header>
+        <div class="library-grid" id="librarySubjects">
+          <p class="empty-state">No courses yet. Create one in the Courses page!</p>
+        </div>
+      </div>
+
+      <div class="page hidden" id="page-activity">
+        <header class="page-header">
+          <h1>Activity</h1>
+          <p id="activitySubtitle">Track your progress</p>
+        </header>
+        <div class="activity-layout">
+          <div class="activity-section">
+            <h3>Topic Progress</h3>
+            <div id="subjectProgressList">
+              <p class="empty-state">No data yet. Start studying!</p>
+            </div>
+          </div>
+          <div class="activity-section">
+            <div class="chart-header">
+              <h3>Progress Chart</h3>
+              <div class="toggle-group">
+                <button class="toggle-btn active" id="activityWeekly">Weekly</button>
+                <button class="toggle-btn" id="activityMonthly">Monthly</button>
+              </div>
+            </div>
+            <div id="progressChart">
+              <p class="empty-state">No study data yet. Start studying!</p>
+            </div>
+          </div>
+          <div class="activity-section">
+            <h3>Progress Reports</h3>
+            <div id="activityInsights"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page hidden" id="page-milestones">
+        <header class="page-header">
+          <h1>Milestones</h1>
+          <p id="milestonesSubtitle">Achieve your goals</p>
+        </header>
+        <div class="milestones-layout">
+          <div class="level-card">
+            <div class="level-info">
+              <span class="level-number" id="milestoneLevel">Level 1</span>
+              <div class="xp-bar">
+                <div class="xp-fill" id="milestoneXPBar" style="width: 0%"></div>
+              </div>
+              <span class="xp-text" id="milestoneXP">0 / 50 XP</span>
+            </div>
+          </div>
+          <div class="milestones-grid" id="milestonesList"></div>
+          <div class="recent-achievements">
+            <h3>Recent Achievements</h3>
+            <div id="recentAchievements">
+              <p class="empty-state">No achievements yet. Keep studying!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page hidden" id="page-settings">
+        <header class="page-header">
+          <h1>Settings</h1>
+          <p id="settingsSubtitle">Customize your experience</p>
+        </header>
+        <div class="settings-layout">
+          <div class="settings-card">
+            <h3>Profile</h3>
+            <div class="profile-avatar-section">
+              <div class="profile-avatar-preview" id="profileAvatarPreview"></div>
+              <div class="profile-avatar-actions">
+                <input type="file" id="avatarUpload" accept="image/*" class="hidden">
+                <button type="button" class="btn btn-primary btn-sm" id="addAvatarBtn">Add/Change Image</button>
+                <button type="button" class="btn btn-secondary btn-sm hidden" id="removeAvatarBtn">Remove Image</button>
+              </div>
+            </div>
+            <form id="profileForm">
+              <div class="form-group">
+                <label>Display Name</label>
+                <input type="text" id="settingsDisplayName" placeholder="Your name">
+              </div>
+              <button type="submit" class="btn btn-primary">Save Profile</button>
+            </form>
+            <div class="profile-stats">
+              <div class="stat-item">
+                <span class="stat-label">Rank</span>
+                <span class="stat-value" id="settingsRank">Lv. 1</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">XP</span>
+                <span class="stat-value" id="settingsXP">0 XP</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Milestones</span>
+                <span class="stat-value" id="settingsMilestones">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Total Time</span>
+                <span class="stat-value" id="settingsTotalTime">0h</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h3>Appearance</h3>
+            <div class="setting-group">
+              <label>Theme</label>
+              <div class="theme-selector" id="themeSelector"></div>
+            </div>
+            <div class="setting-group">
+              <label>Accent Color</label>
+              <div class="accent-selector" id="accentSelector"></div>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h3>Study Intensity</h3>
+            <div class="setting-group">
+              <label>XP Rate Tier</label>
+              <div class="tier-selector" id="tierSelector"></div>
+              <p class="setting-hint">Higher intensity = more XP per minute</p>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h3>Account Security</h3>
+            <p class="setting-hint">Manage your password and account</p>
+            <button class="btn btn-primary btn-block" id="accountSecurityBtn">Account Security</button>
+          </div>
+
+          <div class="settings-card">
+            <h3>Support</h3>
+            <form id="supportForm">
+              <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="supportName" placeholder="Your name" required>
+              </div>
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="supportEmail" placeholder="you@email.com" required>
+              </div>
+              <div class="form-group">
+                <label>Subject</label>
+                <input type="text" id="supportSubject" placeholder="What's this about?" required>
+              </div>
+              <div class="form-group">
+                <label>Message</label>
+                <textarea id="supportMessage" rows="4" placeholder="Describe your concern..." required></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">Send to Support</button>
+            </form>
+            <div class="support-email">
+              <p>Or email us directly:</p>
+              <a href="mailto:richardkaunda968@gmail.com">richardkaunda968@gmail.com</a>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h3>FAQ & Guidelines</h3>
+            <div class="faq-list">
+              <details>
+                <summary>How do I create a course?</summary>
+                <p>Go to the Courses page, enter a course name, and click "Create Course".</p>
+              </details>
+              <details>
+                <summary>How does the XP system work?</summary>
+                <p>You earn XP based on active study time. Choose your intensity tier in Settings.</p>
+              </details>
+              <details>
+                <summary>Can I change my study intensity?</summary>
+                <p>Yes, go to Settings and select a different tier anytime.</p>
+              </details>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h3>Account</h3>
+            <button class="btn btn-danger btn-block" id="logoutBtn">Log Out</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Progress Reports Overlay -->
+  <div class="progress-reports-overlay hidden" id="progressReportsOverlay">
+    <div class="progress-reports-backdrop" id="progressReportsBackdrop"></div>
+    <div class="progress-reports-panel">
+      <div class="progress-reports-header">
+        <button class="btn btn-icon" id="progressReportsClose">&#8592;</button>
+        <h2>Progress Reports</h2>
+        <div class="header-spacer"></div>
+      </div>
+      <div class="progress-reports-body" id="progressReportsBody">
+        <div class="reports-view" id="reportsYearView">
+          <p class="reports-subtitle">Select a year to view your monthly reports</p>
+          <div class="reports-year-grid" id="reportsYearGrid"></div>
+        </div>
+        <div class="reports-view hidden" id="reportsMonthView">
+          <div class="reports-month-header">
+            <button class="btn btn-sm btn-secondary" id="reportsBackToYears">&#8592; Years</button>
+            <h3 id="reportsMonthYearTitle">2026</h3>
+          </div>
+          <div class="reports-month-grid" id="reportsMonthGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly Report Modal -->
+  <div class="report-modal-overlay hidden" id="reportModalOverlay">
+    <div class="report-modal-backdrop" id="reportModalBackdrop"></div>
+    <div class="report-modal-panel" id="reportModalPanel">
+      <div class="report-modal-header">
+        <button class="btn btn-icon" id="reportModalClose">&#8592;</button>
+        <div class="report-header-actions">
+          <button class="btn btn-sm btn-primary" id="reportDownloadBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download PDF
+          </button>
+        </div>
+      </div>
+      <div class="report-modal-content" id="reportModalContent"></div>
+    </div>
+  </div>
+
+  <div class="security-overlay hidden" id="accountSecurityOverlay">
+    <div class="security-panel">
+      <div class="security-header">
+        <h3>Account Security</h3>
+        <button class="btn btn-icon" id="closeSecurityOverlay">&#10005;</button>
+      </div>
+      <div class="security-section">
+        <h4>Change Password</h4>
+        <form id="changePasswordForm">
+          <div class="form-group">
+            <label>New Password</label>
+            <input type="password" id="newPassword" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input type="password" id="confirmNewPassword" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" required minlength="6">
+          </div>
+          <button type="submit" class="btn btn-primary">Update Password</button>
+        </form>
+      </div>
+      <div class="security-divider"></div>
+      <div class="security-section">
+        <h4>Forgot Password?</h4>
+        <p class="security-hint">We'll send a password reset link to your email.</p>
+        <button class="btn btn-secondary" id="resetPasswordBtn">Send Reset Email</button>
+      </div>
+      <div class="security-divider"></div>
+      <div class="security-section">
+        <h4>Delete Account</h4>
+        <p class="security-hint danger">This will permanently delete your account and all data. This cannot be undone.</p>
+        <button class="btn btn-danger" id="deleteAccountBtn">Delete My Account</button>
+        <div class="delete-confirm hidden" id="deleteConfirmSection">
+          <div class="form-group">
+            <label>Enter your password to confirm</label>
+            <input type="password" id="deletePassword" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;">
+          </div>
+          <div class="delete-actions">
+            <button class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+            <button class="btn btn-danger" id="confirmDeleteBtn">Permanently Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="study-space hidden" id="studySpace">
+    <div class="study-space-header">
+      <h2 id="studyTitle">Study Workspace</h2>
+      <button class="btn btn-danger" id="endSessionBtn">End Session</button>
+    </div>
+    <div class="study-space-body">
+      <div class="study-doc-viewer" id="studyDocViewer">
+        <p class="empty-state">No document loaded.</p>
+      </div>
+      <button class="ai-chat-fab" id="aiChatFab" title="Open AI Study Assistant">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </button>
+      <div class="study-ai-panel" id="studyAiPanel">
+        <div class="ai-panel-header">
+          <button class="ai-back-btn" id="aiBackBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <h3>AI Study Assistant</h3>
+          <div class="ai-header-spacer"></div>
+        </div>
+        <div class="ai-messages" id="studyChatMessages"></div>
+        <div class="ai-input-area">
+          <input type="text" id="studyChatInput" placeholder="Ask me anything...">
+          <button class="btn btn-primary" id="studyChatSend">&#10148;</button>
+        </div>
+        <div class="ai-quick-actions">
+          <button class="btn btn-sm btn-outline ai-quick-action" data-prompt="Summarize this">Summarize</button>
+          <button class="btn btn-sm btn-outline ai-quick-action" data-prompt="Quiz me on this">Quiz</button>
+          <button class="btn btn-sm btn-outline ai-quick-action" data-prompt="Explain this concept">Explain</button>
+          <button class="btn btn-sm btn-outline ai-quick-action" data-prompt="Key focus areas">Focus Areas</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="mobile-nav hidden" id="mobileNav">
+    <a href="#/home" class="mob-nav-link active" data-page="home">
+      <span>&#127968;</span>
+      <small>Home</small>
+    </a>
+    <a href="#/courses" class="mob-nav-link" data-page="courses">
+      <span>&#128218;</span>
+      <small>Courses</small>
+    </a>
+    <a href="#/library" class="mob-nav-link" data-page="library">
+      <span>&#128214;</span>
+      <small>Library</small>
+    </a>
+    <a href="#/activity" class="mob-nav-link" data-page="activity">
+      <span>&#128200;</span>
+      <small>Activity</small>
+    </a>
+    <a href="#/milestones" class="mob-nav-link" data-page="milestones">
+      <span>&#127942;</span>
+      <small>Milestones</small>
+    </a>
+    <a href="#/settings" class="mob-nav-link" data-page="settings">
+      <span>&#9881;</span>
+      <small>Settings</small>
+    </a>
+  </nav>
+
+  <script src="js/store.js"></script>
+  <script type="module" src="js/firebase.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/router.js"></script>
+  <script type="module" src="js/pages/auth.js"></script>
+  <script type="module" src="js/pages/home.js"></script>
+  <script type="module" src="js/pages/courses.js"></script>
+  <script type="module" src="js/pages/library.js"></script>
+  <script type="module" src="js/pages/study.js"></script>
+  <script type="module" src="js/pages/activity.js"></script>
+  <script type="module" src="js/pages/milestones.js"></script>
+  <script type="module" src="js/pages/settings.js"></script>
+  <script type="module" src="js/app.js"></script>
+
+  <div class="avatar-lightbox hidden" id="avatarLightbox">
+    <button class="avatar-lightbox-close" id="avatarLightboxClose">&times;</button>
+    <div class="avatar-lightbox-circle">
+      <img class="avatar-lightbox-img" id="avatarLightboxImg" src="" alt="Full size avatar">
+    </div>
+  </div>
+
+</body>
+</html>
