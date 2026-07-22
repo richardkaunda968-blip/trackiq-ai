@@ -1,8 +1,9 @@
 /* ============================================
-   TRACKIQ — MILESTONES PAGE (Gamification)
+   ORION — MILESTONES PAGE (v2)
+   Gamification with Focus Block daily milestone
    ============================================ */
 
-import { createMilestone, fetchMilestones } from '../firebase.js';
+import { createMilestone, fetchMilestones, updateProfileData, getProfile } from '../firebase.js';
 
 (function() {
   const MILESTONE_DEFINITIONS = [
@@ -30,9 +31,9 @@ import { createMilestone, fetchMilestones } from '../firebase.js';
     {
       id: 'focus_block',
       name: 'Focus Block',
-      description: 'Study without interruption for your chosen time duration for a subject. Every session.',
+      description: 'Complete a full-duration study session without interruption. Resets daily.',
       icon: '🎯',
-      type: 'per_session'
+      type: 'daily'
     },
     {
       id: 'study_progress',
@@ -43,10 +44,19 @@ import { createMilestone, fetchMilestones } from '../firebase.js';
     }
   ];
 
+  // Track focus block state for daily reset
+  let focusBlockState = {
+    completedToday: false,
+    lastResetDate: null
+  };
+
   function init() {
+    loadFocusBlockState();
     renderMilestones();
     renderRecentAchievements();
     renderXPLevel();
+    setupFocusBlockListener();
+
     window.addEventListener('pagechange', (e) => {
       if (e.detail.page === 'milestones') {
         updatePageSubtitle();
@@ -57,21 +67,133 @@ import { createMilestone, fetchMilestones } from '../firebase.js';
     });
   }
 
-  /* ---------- GREETING HELPER ---------- */
-  function getGreeting() {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
+  /* ---------- FOCUS BLOCK MILESTONE SYSTEM ---------- */
+
+  function loadFocusBlockState() {
+    const stored = localStorage.getItem('focusBlockState');
+    if (stored) {
+      focusBlockState = JSON.parse(stored);
+    }
+    checkAndResetFocusBlock();
   }
 
+  function saveFocusBlockState() {
+    localStorage.setItem('focusBlockState', JSON.stringify(focusBlockState));
+  }
+
+  function checkAndResetFocusBlock() {
+    const now = new Date();
+    const today = now.toDateString();
+
+    if (focusBlockState.lastResetDate !== today) {
+      focusBlockState.completedToday = false;
+      focusBlockState.lastResetDate = today;
+      saveFocusBlockState();
+    }
+  }
+
+  function setupFocusBlockListener() {
+    // Listen for study session end events
+    window.addEventListener('studysession:end', async (e) => {
+      const sessionData = e.detail;
+      if (!sessionData) return;
+
+      // Check if this was a successful full-duration session
+      const { duration_minutes, planned_duration_minutes, interrupted } = sessionData;
+
+      // A focus block is: completed full planned duration, not interrupted
+      const isFullDuration = planned_duration_minutes && 
+        duration_minutes >= planned_duration_minutes * 0.95; // Allow 5% tolerance
+      const wasNotInterrupted = interrupted !== true;
+
+      if (isFullDuration && wasNotInterrupted && !focusBlockState.completedToday) {
+        await completeFocusBlockMilestone(sessionData);
+      }
+    });
+
+    // Also check on page load in case session ended while on another page
+    window.addEventListener('focus', () => {
+      checkAndResetFocusBlock();
+    });
+  }
+
+  async function completeFocusBlockMilestone(sessionData) {
+    const user = window.Store.get('user');
+    if (!user) return;
+
+    checkAndResetFocusBlock();
+
+    if (focusBlockState.completedToday) return; // Already completed today
+
+    try {
+      // Award XP for focus block
+      const xpEarned = 25; // Base XP for focus block
+      const profile = window.Store.get('profile') || {};
+      const currentXP = profile.xp || 0;
+      const currentLevel = profile.level || 1;
+
+      const newXP = currentXP + xpEarned;
+      const xpForNext = 50 * currentLevel * currentLevel;
+
+      let newLevel = currentLevel;
+      let levelUp = false;
+
+      if (newXP >= xpForNext) {
+        newLevel = currentLevel + 1;
+        levelUp = true;
+      }
+
+      // Update profile
+      await updateProfileData(user.uid, {
+        xp: newXP,
+        level: newLevel,
+        milestones_count: (profile.milestones_count || 0) + 1
+      });
+
+      // Create milestone record
+      await createMilestone(user.uid, {
+        name: 'Focus Block',
+        description: `Completed a ${sessionData.duration_minutes}min uninterrupted study session`,
+        icon: '🎯',
+        type: 'daily',
+        xp_earned: xpEarned,
+        session_id: sessionData.id || null,
+        achieved_at: new Date()
+      });
+
+      // Update local state
+      focusBlockState.completedToday = true;
+      focusBlockState.lastResetDate = new Date().toDateString();
+      saveFocusBlockState();
+
+      // Update store
+      const updatedProfile = await getProfile(user.uid);
+      window.Store.set('profile', updatedProfile);
+
+      // Show toast
+      if (levelUp) {
+        window.showToast(`🎯 Focus Block Complete! +${xpEarned} XP — LEVEL UP! Lv. ${newLevel}`, 'success');
+      } else {
+        window.showToast(`🎯 Focus Block Complete! +${xpEarned} XP`, 'success');
+      }
+
+      // Refresh milestones page if visible
+      renderMilestones();
+      renderRecentAchievements();
+      renderXPLevel();
+
+    } catch (err) {
+      console.error('Failed to complete focus block milestone:', err);
+    }
+  }
+
+  /* ---------- GREETING HELPER ---------- */
   function updatePageSubtitle() {
     const subtitle = document.getElementById('milestonesSubtitle');
-    const profile = window.Store.get('profile') || {};
-    const name = profile.display_name || 'Student';
     if (subtitle) {
-      subtitle.textContent = `${getGreeting()}, ${name} — achieve your goals`;
+      window.OrionInjector.updateGreeting(subtitle);
     }
+    if (window.OrionInjector) window.OrionInjector.inject('page-milestones', 'milestonesSubtitle');
   }
 
   function renderMilestones() {
@@ -132,7 +254,7 @@ import { createMilestone, fetchMilestones } from '../firebase.js';
         thisWeekDays.add(d.toDateString());
       }
     });
-    const scheduledDays = courses.length * 7; // simplified
+    const scheduledDays = courses.length * 7;
     progress.no_days_off = {
       current: thisWeekDays.size,
       target: 7,
@@ -153,12 +275,22 @@ import { createMilestone, fetchMilestones } from '../firebase.js';
       completed: thisWeekMinutes >= weeklyGoal
     };
 
-    // Focus Block
-    const focusSessions = sessions.filter(s => (s.duration_minutes || 0) >= 25);
+    // Focus Block — daily, resets at midnight
+    checkAndResetFocusBlock();
+    const focusSessionsToday = sessions.filter(s => {
+      const d = s.ended_at?.toDate?.() || new Date(s.ended_at);
+      return d && d.toDateString() === now.toDateString() && 
+             (s.duration_minutes || 0) >= 25 &&
+             s.interrupted !== true;
+    });
+
+    // Also check the stored state
+    const isFocusCompleted = focusBlockState.completedToday || focusSessionsToday.length > 0;
+
     progress.focus_block = {
-      current: focusSessions.length,
+      current: isFocusCompleted ? 1 : 0,
       target: 1,
-      completed: focusSessions.length > 0
+      completed: isFocusCompleted
     };
 
     // Study Progress

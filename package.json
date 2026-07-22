@@ -1,26 +1,28 @@
 {
-  "name": "trackiq",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "orion",
+  "version": "2.0.0",
+  "description": "Intelligent academic companion for students",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/richardkaunda968-blip/trackiq-ai.git"
+    "url": "git+https://github.com/richardkaunda968-blip/orion.git"
   },
-  "keywords": [],
+  "keywords": ["study", "education", "ai", "productivity"],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/richardkaunda968-blip/trackiq-ai/issues"
+    "url": "https://github.com/richardkaunda968-blip/orion/issues"
   },
-  "homepage": "https://github.com/richardkaunda968-blip/trackiq-ai#readme",
+  "homepage": "https://github.com/richardkaunda968-blip/orion#readme",
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "firebase": "^12.15.0"
+    "firebase": "^12.15.0",
+    "web-push": "^3.6.7"
   }
 }

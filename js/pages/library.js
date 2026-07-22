@@ -1,14 +1,15 @@
 /* ============================================
-   TRACKIQ — LIBRARY PAGE (v4)
-   Course → Topic → Study Space (auto-load first doc)
+   ORION — LIBRARY PAGE (v5.4)
+   Course → Topic → Study Workspace with Study AI
    ============================================ */
 
 import { fetchTopics, fetchResources } from '../firebase.js';
 
 (function() {
-  let currentView = 'courses'; // 'courses' | 'topics'
+  let currentView = 'courses';
   let selectedCourseId = null;
   let selectedTopicId = null;
+  let aiTriggerBound = false;
 
   function init() {
     renderLibrary();
@@ -23,20 +24,13 @@ import { fetchTopics, fetchResources } from '../firebase.js';
     });
   }
 
-  /* ---------- GREETING HELPER ---------- */
-  function getGreeting() {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
-
   function updatePageSubtitle() {
     const subtitle = document.getElementById('librarySubtitle');
-    const profile = window.Store.get('profile') || {};
-    const name = profile.display_name || 'Student';
     if (subtitle) {
-      subtitle.textContent = `${getGreeting()}, ${name} — your study library`;
+      window.OrionInjector.updateGreeting(subtitle);
+    }
+    if (window.OrionInjector) {
+      window.OrionInjector.inject('page-library', 'librarySubtitle');
     }
   }
 
@@ -105,7 +99,6 @@ import { fetchTopics, fetchResources } from '../firebase.js';
     }
 
     try {
-      // Try store first, fetch only if missing
       const allTopics = window.Store.get('topics') || {};
       let topics = allTopics[selectedCourseId];
 
@@ -115,7 +108,6 @@ import { fetchTopics, fetchResources } from '../firebase.js';
         window.Store.set('topics', allTopics);
       }
 
-      // Update course topic count in store
       const courseIndex = courses.findIndex(c => c.id === selectedCourseId);
       if (courseIndex >= 0) {
         courses[courseIndex] = { ...courses[courseIndex], topicCount: topics.length };
@@ -163,7 +155,6 @@ import { fetchTopics, fetchResources } from '../firebase.js';
 
     if (!course || !topic) return;
 
-    // Fetch resources for this topic
     let resources = [];
     try {
       resources = await fetchResources(selectedTopicId);
@@ -174,7 +165,6 @@ import { fetchTopics, fetchResources } from '../firebase.js';
       console.error('Failed to fetch resources:', err);
     }
 
-    // Store context
     window.Store.set('activeCourse', course);
     window.Store.set('activeTopic', topic);
     window.Store.set('activeResources', resources);
@@ -183,11 +173,13 @@ import { fetchTopics, fetchResources } from '../firebase.js';
     const studySpace = document.getElementById('studySpace');
     const docViewer = document.getElementById('studyDocViewer');
     const studyTitle = document.getElementById('studyTitle');
+    const aiTrigger = document.getElementById('studyAiTrigger');
     if (!studySpace || !docViewer) return;
 
     studyTitle.textContent = `${course.name} › ${topic.name}`;
 
-    // If no resources, show message
+    if (aiTrigger) aiTrigger.style.display = 'none';
+
     if (resources.length === 0) {
       docViewer.innerHTML = `
         <div class="study-welcome">
@@ -204,10 +196,21 @@ import { fetchTopics, fetchResources } from '../firebase.js';
       return;
     }
 
-    // Auto-load the first resource
     const firstResource = resources[0];
     window.Store.set('activeResource', firstResource);
     await loadDocumentIntoViewer(firstResource, docViewer);
+
+    if (aiTrigger) {
+      aiTrigger.style.display = 'flex';
+      
+      if (!aiTriggerBound) {
+        aiTrigger.addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.openStudyAIWorkspace();
+        });
+        aiTriggerBound = true;
+      }
+    }
 
     studySpace.classList.remove('hidden');
     attachEndSessionListener();
@@ -216,10 +219,54 @@ import { fetchTopics, fetchResources } from '../firebase.js';
     }));
   }
 
+  /* ============================================
+     STUDY AI WORKSPACE — OPEN / CLOSE
+     ============================================ */
+
+  function openStudyAIWorkspace() {
+    const workspace = document.getElementById('studyAiWorkspace');
+    if (!workspace) {
+      console.error('Study AI workspace not found in DOM');
+      return;
+    }
+    
+    workspace.classList.remove('hidden');
+    workspace.style.cssText = 
+      'position: fixed; ' +
+      'top: 0; ' +
+      'left: 0; ' +
+      'width: 100%; ' +
+      'height: 100%; ' +
+      'z-index: 99999; ' +
+      'display: flex; ' +
+      'flex-direction: column; ' +
+      'background: var(--bg-primary, #050505); ' +
+      'opacity: 1; ' +
+      'pointer-events: auto; ' +
+      'visibility: visible;';
+    
+    setTimeout(() => {
+      const input = document.getElementById('studyAiInput');
+      if (input) input.focus();
+    }, 100);
+    
+    window.dispatchEvent(new CustomEvent('studyai:workspaceopen'));
+  }
+
+  function closeStudyAIWorkspace() {
+    const workspace = document.getElementById('studyAiWorkspace');
+    if (workspace) {
+      workspace.classList.add('hidden');
+      workspace.style.cssText = '';
+    }
+  }
+
+  window.openStudyAIWorkspace = openStudyAIWorkspace;
+  window.closeStudyAIWorkspace = closeStudyAIWorkspace;
+
   async function loadDocumentIntoViewer(resource, docViewer) {
     if (!resource || !docViewer) return;
 
-    // Support both old base64 data and new Cloudinary URLs
     const fileUrl = resource.file_url || resource.file_data;
 
     if (!fileUrl) {
@@ -233,7 +280,6 @@ import { fetchTopics, fetchResources } from '../firebase.js';
       return;
     }
 
-    // Show loading state
     docViewer.innerHTML = `
       <div class="study-welcome">
         <div class="study-welcome-icon">⏳</div>
@@ -243,7 +289,7 @@ import { fetchTopics, fetchResources } from '../firebase.js';
 
     try {
       if (resource.file_type && resource.file_type.startsWith('image/')) {
-        docViewer.innerHTML = `<img src="${fileUrl}" style="max-width:100%; height:auto; display:block;" onload="this.style.opacity=1" onerror="this.parentElement.innerHTML='<div class='study-welcome'><div class='study-welcome-icon'>❌</div><h3>Failed to load image</h3></div>'" />`;
+        docViewer.innerHTML = `<img src="${fileUrl}" style="max-width:100%; height:auto; display:block;" />`;
         await extractTextFromImage(fileUrl);
       } else if (resource.file_type === 'application/pdf') {
         docViewer.innerHTML = `<iframe src="${fileUrl}" style="width:100%; height:100%; border:none; min-height:500px;"></iframe>`;

@@ -6,7 +6,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-xl);
-  max-width: 800px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .settings-card {
@@ -14,6 +15,9 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .settings-card h3 {
@@ -24,6 +28,54 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* Profile Section */
+.profile-avatar-section {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-avatar-preview {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid var(--border);
+}
+
+.profile-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar-preview.has-image {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-avatar-preview.has-image:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+.profile-avatar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
 /* Profile Stats */
 .profile-stats {
   display: grid;
@@ -32,6 +84,7 @@
   margin-top: var(--space-xl);
   padding-top: var(--space-xl);
   border-top: 1px solid var(--border);
+  width: 100%;
 }
 
 .stat-item {
@@ -93,9 +146,31 @@
   font-size: var(--text-base);
 }
 
-/* Logout Button */
+/* Buttons inside settings cards stretch full width */
+.settings-card .btn-block,
+.settings-card .settings-overlay-btn,
 .settings-card .btn-danger {
   width: 100%;
+  margin-bottom: var(--space-md);
+}
+
+.settings-card .btn-block:last-child,
+.settings-card .settings-overlay-btn:last-child,
+.settings-card .btn-danger:last-child {
+  margin-bottom: 0;
+}
+
+/* Forms inside settings cards */
+.settings-card form {
+  width: 100%;
+}
+
+.settings-card .form-group {
+  margin-bottom: var(--space-md);
+}
+
+.settings-card .form-group:last-child {
+  margin-bottom: 0;
 }
 
 /* Responsive */
@@ -103,8 +178,19 @@
   .profile-stats {
     grid-template-columns: repeat(2, 1fr);
   }
-  
-  .settings-layout {
-    max-width: 100%;
+
+  .profile-avatar-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stat-item .stat-value {
+    font-size: var(--text-base);
   }
 }

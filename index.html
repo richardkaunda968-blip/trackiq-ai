@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TrackIQ</title>
+  <title>Orion</title>
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="css/pages/milestones.css">
   <link rel="stylesheet" href="css/pages/settings.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <link rel="stylesheet" href="css/orion.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -54,6 +55,21 @@
 
   <div class="toast-container" id="toastContainer"></div>
 
+  <!-- Notification Permission Banner -->
+  <div class="notification-banner hidden" id="notificationBanner">
+    <div class="notification-banner-content">
+      <span class="notification-banner-icon">🔔</span>
+      <div class="notification-banner-text">
+        <strong>Stay on track with Orion</strong>
+        <p>Enable notifications for study reminders, exam alerts, and recovery suggestions.</p>
+      </div>
+    </div>
+    <div class="notification-banner-actions">
+      <button class="btn btn-primary btn-sm" id="enableNotificationsBtn">Enable</button>
+      <button class="btn btn-outline btn-sm" id="dismissNotificationsBtn">Not Now</button>
+    </div>
+  </div>
+
   <div class="modal-overlay hidden" id="logoutModal">
     <div class="logout-modal-card">
       <div class="logout-icon">
@@ -75,18 +91,11 @@
   <div class="page" id="page-auth">
     <div class="auth-container">
       <div class="auth-logo">
-        <svg class="trackiq-logo" viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
-          <rect x="10" y="85" width="100" height="4" rx="2" fill="currentColor" opacity="0.3"/>
-          <rect x="18" y="58" width="16" height="27" rx="2" fill="currentColor"/>
-          <rect x="42" y="38" width="16" height="47" rx="2" fill="currentColor"/>
-          <rect x="66" y="22" width="16" height="63" rx="2" fill="currentColor"/>
-          <rect x="90" y="6" width="16" height="79" rx="2" fill="currentColor"/>
-        </svg>
-        <h1>TrackIQ</h1>
+        <h1>Orion</h1>
       </div>
       <div class="auth-card">
         <h2 id="authTitle">Welcome Back</h2>
-        <p id="authSubtitle">Sign in to continue tracking</p>
+        <p id="authSubtitle">Sign in to continue your academic journey</p>
         <form id="authForm">
           <div class="form-group hidden" id="nameGroup">
             <label>Display Name</label>
@@ -128,14 +137,7 @@
   <div class="app-shell hidden" id="appShell">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <svg class="trackiq-logo" viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
-          <rect x="10" y="85" width="100" height="4" rx="2" fill="currentColor" opacity="0.3"/>
-          <rect x="18" y="58" width="16" height="27" rx="2" fill="currentColor"/>
-          <rect x="42" y="38" width="16" height="47" rx="2" fill="currentColor"/>
-          <rect x="66" y="22" width="16" height="63" rx="2" fill="currentColor"/>
-          <rect x="90" y="6" width="16" height="79" rx="2" fill="currentColor"/>
-        </svg>
-        <span class="logo-text">TrackIQ</span>
+        <span class="logo-text">Orion</span>
       </div>
       <nav class="sidebar-nav">
         <a href="#/home" class="nav-link active" data-page="home">
@@ -167,11 +169,16 @@
           <p id="homeSubtitle">Your study overview</p>
         </header>
 
-        <!-- STUDY TIPS: Moved to top, right below greeting -->
-        <div class="home-section study-tips-top">
-          <h3>Study Tips</h3>
-          <div id="studyTipsContainer"></div>
+        <!-- Smart Recommendations -->
+        <div class="home-section smart-recommendations hidden" id="smartRecommendations">
+          <div class="recommendations-header">
+            <h3>What to Study Next</h3>
+            <button class="btn btn-icon" id="recommendationsClose">&#10005;</button>
+          </div>
+          <div id="recommendationsContainer"></div>
         </div>
+
+      
 
         <div class="home-grid">
           <div class="stats-row">
@@ -205,77 +212,13 @@
             <div class="progress-ring-container" id="weeklyProgressRing"></div>
           </div>
 
+          <!-- Planner -->
           <div class="home-section">
             <div class="planner-header">
               <h3>Planner</h3>
-              <button class="btn btn-primary btn-sm" id="plannerAddBtn">+ Add Study Block</button>
-            </div>
-
-            <div class="planner-overlay hidden" id="plannerOverlay">
-              <div class="planner-overlay-backdrop" id="plannerOverlayBackdrop"></div>
-              <div class="planner-overlay-panel">
-                <div class="planner-overlay-header">
-                  <h4>Plan a Study Block</h4>
-                  <button class="btn btn-icon" id="plannerOverlayClose">&#10005;</button>
-                </div>
-                <form id="plannerForm" class="planner-form">
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label>Course</label>
-                      <select id="plannerCourse" required>
-                        <option value="">Select Course</option>
-                      </select>
-                    </div>
-                    <div class="form-group">
-                      <label>Topic</label>
-                      <select id="plannerTopic" disabled required>
-                        <option value="">Select Topic</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label>Day</label>
-                      <select id="plannerDay" required>
-                        <option value="monday">Monday</option>
-                        <option value="tuesday">Tuesday</option>
-                        <option value="wednesday">Wednesday</option>
-                        <option value="thursday">Thursday</option>
-                        <option value="friday">Friday</option>
-                        <option value="saturday">Saturday</option>
-                        <option value="sunday">Sunday</option>
-                      </select>
-                    </div>
-                    <div class="form-group">
-                      <label>Start Time</label>
-                      <input type="time" id="plannerStartTime" required>
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label>Duration</label>
-                      <div class="duration-inputs">
-                        <input type="number" id="plannerDurationHours" placeholder="Hrs" min="0" max="12" value="1">
-                        <span>h</span>
-                        <input type="number" id="plannerDurationMinutes" placeholder="Min" min="0" max="59" value="0">
-                        <span>m</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="planner-overlay-actions">
-                    <button type="button" class="btn btn-secondary" id="plannerOverlayCancel">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Study Block</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            <div id="plannerContainer">
-              <p class="empty-state">No study blocks planned. Add one above!</p>
+              <button class="btn btn-primary btn-sm" id="plannerOpenBtn">Open Planner</button>
             </div>
           </div>
-
-          <!-- Study Tips removed from here — moved to top below greeting -->
         </div>
       </div>
 
@@ -375,6 +318,13 @@
             <h3>Progress Reports</h3>
             <div id="activityInsights"></div>
           </div>
+          <!-- Recovery Plans Section -->
+          <div class="activity-section recovery-section hidden" id="recoverySection">
+            <div class="recovery-section-header">
+              <h3>Recovery Plans</h3>
+              <button class="btn btn-primary btn-sm" id="openRecoveryOverlayBtn">View Recovery Plans</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -446,76 +396,26 @@
             </div>
           </div>
 
+          <!-- Settings Overlays -->
           <div class="settings-card">
-            <h3>Appearance</h3>
-            <div class="setting-group">
-              <label>Theme</label>
-              <div class="theme-selector" id="themeSelector"></div>
-            </div>
-            <div class="setting-group">
-              <label>Accent Color</label>
-              <div class="accent-selector" id="accentSelector"></div>
-            </div>
+            <h3>Customization</h3>
+            <button class="btn btn-primary btn-block settings-overlay-btn" data-overlay="appearance">Appearance</button>
+            <button class="btn btn-primary btn-block settings-overlay-btn" data-overlay="studyIntensity">Study Intensity</button>
+            <button class="btn btn-primary btn-block settings-overlay-btn" data-overlay="dnd">Study Mode (D.N.D.)</button>
+            <button class="btn btn-primary btn-block settings-overlay-btn" data-overlay="teachingStyle">Teaching Style</button>
+            <button class="btn btn-primary btn-block settings-overlay-btn" data-overlay="notifications">Notifications</button>
           </div>
 
           <div class="settings-card">
-            <h3>Study Intensity</h3>
-            <div class="setting-group">
-              <label>XP Rate Tier</label>
-              <div class="tier-selector" id="tierSelector"></div>
-              <p class="setting-hint">Higher intensity = more XP per minute</p>
-            </div>
+            <h3>Help & Support</h3>
+            <button class="btn btn-primary btn-block settings-overlay-btn" data-overlay="support">Support</button>
+            <button class="btn btn-primary btn-block settings-overlay-btn" data-overlay="faq">FAQ & Guidelines</button>
           </div>
 
           <div class="settings-card">
             <h3>Account Security</h3>
             <p class="setting-hint">Manage your password and account</p>
             <button class="btn btn-primary btn-block" id="accountSecurityBtn">Account Security</button>
-          </div>
-
-          <div class="settings-card">
-            <h3>Support</h3>
-            <form id="supportForm">
-              <div class="form-group">
-                <label>Name</label>
-                <input type="text" id="supportName" placeholder="Your name" required>
-              </div>
-              <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="supportEmail" placeholder="you@email.com" required>
-              </div>
-              <div class="form-group">
-                <label>Subject</label>
-                <input type="text" id="supportSubject" placeholder="What's this about?" required>
-              </div>
-              <div class="form-group">
-                <label>Message</label>
-                <textarea id="supportMessage" rows="4" placeholder="Describe your concern..." required></textarea>
-              </div>
-              <button type="submit" class="btn btn-primary">Send to Support</button>
-            </form>
-            <div class="support-email">
-              <p>Or email us directly:</p>
-              <a href="mailto:richardkaunda968@gmail.com">richardkaunda968@gmail.com</a>
-            </div>
-          </div>
-
-          <div class="settings-card">
-            <h3>FAQ & Guidelines</h3>
-            <div class="faq-list">
-              <details>
-                <summary>How do I create a course?</summary>
-                <p>Go to the Courses page, enter a course name, and click "Create Course".</p>
-              </details>
-              <details>
-                <summary>How does the XP system work?</summary>
-                <p>You earn XP based on active study time. Choose your intensity tier in Settings.</p>
-              </details>
-              <details>
-                <summary>Can I change my study intensity?</summary>
-                <p>Yes, go to Settings and select a different tier anytime.</p>
-              </details>
-            </div>
           </div>
 
           <div class="settings-card">
@@ -570,6 +470,222 @@
     </div>
   </div>
 
+  <!-- Settings Overlays -->
+  <!-- Appearance Overlay -->
+  <div class="settings-overlay hidden" id="appearanceOverlay">
+    <div class="settings-overlay-backdrop" data-overlay="appearance"></div>
+    <div class="settings-overlay-panel">
+      <div class="settings-overlay-header">
+        <h3>Appearance</h3>
+        <button class="btn btn-icon settings-overlay-close" data-overlay="appearance">&#10005;</button>
+      </div>
+      <div class="settings-overlay-body">
+        <div class="setting-group">
+          <label>Theme</label>
+          <div class="theme-selector" id="themeSelector"></div>
+        </div>
+        <div class="setting-group">
+          <label>Accent Color</label>
+          <div class="accent-selector" id="accentSelector"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Study Intensity Overlay -->
+  <div class="settings-overlay hidden" id="studyIntensityOverlay">
+    <div class="settings-overlay-backdrop" data-overlay="studyIntensity"></div>
+    <div class="settings-overlay-panel">
+      <div class="settings-overlay-header">
+        <h3>Study Intensity</h3>
+        <button class="btn btn-icon settings-overlay-close" data-overlay="studyIntensity">&#10005;</button>
+      </div>
+      <div class="settings-overlay-body">
+        <div class="setting-group">
+          <label>XP Rate Tier</label>
+          <div class="tier-selector" id="tierSelector"></div>
+          <p class="setting-hint">Higher intensity = more XP per minute</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D.N.D. Overlay -->
+  <div class="settings-overlay hidden" id="dndOverlay">
+    <div class="settings-overlay-backdrop" data-overlay="dnd"></div>
+    <div class="settings-overlay-panel">
+      <div class="settings-overlay-header">
+        <h3>Study Mode (D.N.D.)</h3>
+        <button class="btn btn-icon settings-overlay-close" data-overlay="dnd">&#10005;</button>
+      </div>
+      <div class="settings-overlay-body">
+        <p class="setting-hint">Control how Orion behaves during study sessions</p>
+        <div class="setting-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="dndAutoEnable" checked>
+            <span class="checkmark"></span>
+            Automatically enable D.N.D. when I start a study session
+          </label>
+        </div>
+        <div class="setting-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="dndAllowBreakReminders" checked>
+            <span class="checkmark"></span>
+            Allow break reminders during D.N.D.
+          </label>
+        </div>
+        <div class="setting-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="dndAllowOrionNotifications" checked>
+            <span class="checkmark"></span>
+            Allow Orion notifications during D.N.D.
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Teaching Style Overlay -->
+  <div class="settings-overlay hidden" id="teachingStyleOverlay">
+    <div class="settings-overlay-backdrop" data-overlay="teachingStyle"></div>
+    <div class="settings-overlay-panel">
+      <div class="settings-overlay-header">
+        <h3>Teaching Style</h3>
+        <button class="btn btn-icon settings-overlay-close" data-overlay="teachingStyle">&#10005;</button>
+      </div>
+      <div class="settings-overlay-body">
+        <p class="setting-hint">Orion adapts explanations to your educational system</p>
+        <div class="setting-group">
+          <label>Education Region</label>
+          <select id="educationRegion">
+            <option value="commonwealth">Commonwealth (UK, Australia, Canada, etc.)</option>
+            <option value="us">United States</option>
+            <option value="europe">Continental Europe</option>
+            <option value="other">Other / General</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notifications Overlay -->
+  <div class="settings-overlay hidden" id="notificationsOverlay">
+    <div class="settings-overlay-backdrop" data-overlay="notifications"></div>
+    <div class="settings-overlay-panel">
+      <div class="settings-overlay-header">
+        <h3>Notifications</h3>
+        <button class="btn btn-icon settings-overlay-close" data-overlay="notifications">&#10005;</button>
+      </div>
+      <div class="settings-overlay-body">
+        <div class="setting-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="reminderEnabled" checked>
+            <span class="checkmark"></span>
+            Enable study reminders
+          </label>
+        </div>
+        <div class="setting-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="notificationEnabled">
+            <span class="checkmark"></span>
+            Enable browser push notifications
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Support Overlay -->
+  <div class="settings-overlay hidden" id="supportOverlay">
+    <div class="settings-overlay-backdrop" data-overlay="support"></div>
+    <div class="settings-overlay-panel">
+      <div class="settings-overlay-header">
+        <h3>Support</h3>
+        <button class="btn btn-icon settings-overlay-close" data-overlay="support">&#10005;</button>
+      </div>
+      <div class="settings-overlay-body">
+        <form id="supportForm">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="supportName" placeholder="Your name" required>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="supportEmail" placeholder="you@email.com" required>
+          </div>
+          <div class="form-group">
+            <label>Subject</label>
+            <input type="text" id="supportSubject" placeholder="What's this about?" required>
+          </div>
+          <div class="form-group">
+            <label>Message</label>
+            <textarea id="supportMessage" rows="4" placeholder="Describe your concern..." required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Send to Support</button>
+        </form>
+        <div class="support-email">
+          <p>Or email us directly:</p>
+          <a href="mailto:richardkaunda968@gmail.com">richardkaunda968@gmail.com</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ Overlay -->
+  <div class="settings-overlay hidden" id="faqOverlay">
+    <div class="settings-overlay-backdrop" data-overlay="faq"></div>
+    <div class="settings-overlay-panel">
+      <div class="settings-overlay-header">
+        <h3>FAQ & Guidelines</h3>
+        <button class="btn btn-icon settings-overlay-close" data-overlay="faq">&#10005;</button>
+      </div>
+      <div class="settings-overlay-body">
+        <div class="faq-list">
+          <details>
+            <summary>How do I create a course?</summary>
+            <p>Go to the Courses page, enter a course name, and click "Create Course".</p>
+          </details>
+          <details>
+            <summary>How does the XP system work?</summary>
+            <p>You earn XP based on active study time. Choose your intensity tier in Settings.</p>
+          </details>
+          <details>
+            <summary>Can I change my study intensity?</summary>
+            <p>Yes, go to Settings and select a different tier anytime.</p>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recovery Plans Overlay -->
+  <div class="recovery-overlay hidden" id="recoveryOverlay">
+    <div class="recovery-overlay-backdrop" id="recoveryOverlayBackdrop"></div>
+    <div class="recovery-overlay-panel">
+      <div class="recovery-overlay-header">
+        <h3>Recovery Plans</h3>
+        <button class="btn btn-icon" id="recoveryOverlayClose">&#10005;</button>
+      </div>
+      <div class="recovery-overlay-body" id="recoveryOverlayBody">
+        <p class="empty-state">You're on track! No recovery plans needed.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Topic Progress Overlay -->
+  <div class="settings-overlay hidden" id="topicProgressOverlay">
+    <div class="settings-overlay-backdrop" id="topicProgressOverlayBackdrop"></div>
+    <div class="settings-overlay-panel">
+      <div class="settings-overlay-header">
+        <h3>Topic Progress</h3>
+        <button class="btn btn-icon" id="topicProgressOverlayClose">&#10005;</button>
+      </div>
+      <div class="settings-overlay-body" id="topicProgressOverlayBody">
+        <!-- Content rendered by JS -->
+      </div>
+    </div>
+  </div>
+
   <div class="security-overlay hidden" id="accountSecurityOverlay">
     <div class="security-panel">
       <div class="security-header">
@@ -615,44 +731,149 @@
     </div>
   </div>
 
+  <!-- Study Space with D.N.D. -->
   <div class="study-space hidden" id="studySpace">
     <div class="study-space-header">
-      <h2 id="studyTitle">Study Workspace</h2>
+      <div class="study-space-header-left">
+        <h2 id="studyTitle">Study Workspace</h2>
+        <div class="dnd-indicator hidden" id="dndIndicator">
+          <span class="dnd-icon">🔇</span>
+          <span class="dnd-text">D.N.D. Active</span>
+          <button class="dnd-pause-btn" id="dndPauseBtn">Pause</button>
+        </div>
+      </div>
       <button class="btn btn-danger" id="endSessionBtn">End Session</button>
     </div>
     <div class="study-space-body">
       <div class="study-doc-viewer" id="studyDocViewer">
         <p class="empty-state">No document loaded.</p>
       </div>
-      <button class="ai-chat-fab" id="aiChatFab" title="Open AI Study Assistant">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      <!-- Small AI icon inside document viewer -->
+      <button class="study-ai-trigger" id="studyAiTrigger" title="Open Study AI">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
       </button>
-      <div class="study-ai-panel" id="studyAiPanel">
-        <div class="ai-panel-header">
-          <button class="ai-back-btn" id="aiBackBtn">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-          <h3>AI Study Assistant</h3>
-          <div class="ai-header-spacer"></div>
+    </div>
+  </div>
+
+  <!-- ==================== PLANNER OVERLAYS ==================== -->
+
+  <!-- Planner Timetable Overlay -->
+  <div class="planner-timetable-overlay hidden" id="plannerTimetableOverlay">
+    <div class="planner-timetable-backdrop" id="plannerTimetableBackdrop"></div>
+    <div class="planner-timetable-panel">
+      <div class="planner-timetable-header">
+        <h3>Study Weekly Plan</h3>
+        <div class="planner-timetable-actions">
+          <button class="btn btn-sm btn-secondary" id="plannerTodayBtn">Today</button>
+          <button class="btn btn-primary btn-sm" id="plannerAddBlockBtn">+ Add Study Block</button>
+          <button class="btn btn-icon" id="plannerTimetableClose">&#10005;</button>
         </div>
-        <div class="ai-messages" id="studyChatMessages"></div>
-        <div class="ai-input-area">
-          <input type="text" id="studyChatInput" placeholder="Ask me anything...">
-          <button class="btn btn-primary" id="studyChatSend">&#10148;</button>
-        </div>
-        <div class="ai-quick-actions">
-          <button class="btn btn-sm btn-outline ai-quick-action" data-prompt="Summarize this">Summarize</button>
-          <button class="btn btn-sm btn-outline ai-quick-action" data-prompt="Quiz me on this">Quiz</button>
-          <button class="btn btn-sm btn-outline ai-quick-action" data-prompt="Explain this concept">Explain</button>
-          <button class="btn btn-sm btn-outline ai-quick-action" data-prompt="Key focus areas">Focus Areas</button>
-        </div>
+      </div>
+      <div class="planner-timetable-body" id="plannerTimetableBody">
+        <p class="empty-state">Loading planner...</p>
       </div>
     </div>
   </div>
+
+  <!-- Planner Add/Edit Form Overlay — COMPACT -->
+  <div class="planner-form-overlay hidden" id="plannerFormOverlay">
+    <div class="planner-form-backdrop" id="plannerFormBackdrop"></div>
+    <div class="planner-form-panel">
+      <div class="planner-form-header">
+        <h4 id="plannerFormTitle">Add Study Block</h4>
+        <button class="btn btn-icon" id="plannerFormClose">&#10005;</button>
+      </div>
+      <form id="plannerForm" class="planner-form">
+        <div class="form-row compact">
+          <div class="form-group compact">
+            <label>Course</label>
+            <select id="plannerCourse" required>
+              <option value="">Select Course</option>
+            </select>
+          </div>
+          <div class="form-group compact">
+            <label>Topic</label>
+            <select id="plannerTopic" disabled required>
+              <option value="">Select Topic</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row compact">
+          <div class="form-group compact">
+            <label>Start Time</label>
+            <input type="time" id="plannerStartTime" required>
+          </div>
+          <div class="form-group compact">
+            <label>Duration</label>
+            <div class="duration-inputs">
+              <input type="number" id="plannerDurationHours" placeholder="Hrs" min="0" max="12" value="1">
+              <span>h</span>
+              <input type="number" id="plannerDurationMinutes" placeholder="Min" min="0" max="59" value="0">
+              <span>m</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group compact">
+          <label>Schedule Days</label>
+          <div class="day-selector compact" id="daySelector">
+            <button type="button" class="day-btn compact" data-day="monday">Mon</button>
+            <button type="button" class="day-btn compact" data-day="tuesday">Tue</button>
+            <button type="button" class="day-btn compact" data-day="wednesday">Wed</button>
+            <button type="button" class="day-btn compact" data-day="thursday">Thu</button>
+            <button type="button" class="day-btn compact" data-day="friday">Fri</button>
+            <button type="button" class="day-btn compact" data-day="saturday">Sat</button>
+            <button type="button" class="day-btn compact" data-day="sunday">Sun</button>
+          </div>
+          <p class="setting-hint compact">Select one or more days. Each selected day gets the same time slot.</p>
+        </div>
+        <div class="form-group compact">
+          <label class="checkbox-label compact">
+            <input type="checkbox" id="plannerRecurring" checked>
+            <span class="checkmark"></span>
+            Recurring weekly
+          </label>
+        </div>
+        <div class="planner-form-actions compact">
+          <button type="button" class="btn btn-secondary btn-sm" id="plannerFormCancel">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="plannerFormSubmit">Add Study Block</button>
+        </div>
+        <div class="planner-edit-actions hidden compact" id="plannerEditActions">
+          <button type="button" class="btn btn-success btn-sm" id="plannerStartStudyBtn">▶ Start Study</button>
+          <button type="button" class="btn btn-danger btn-sm" id="plannerDeleteBtn">Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Overlay -->
+  <div class="planner-delete-overlay hidden" id="plannerDeleteOverlay">
+    <div class="planner-delete-backdrop" id="plannerDeleteBackdrop"></div>
+    <div class="planner-delete-panel">
+      <h4>Delete Study Block?</h4>
+      <p>This will permanently remove this study block. This cannot be undone.</p>
+      <div class="planner-delete-actions">
+        <button class="btn btn-secondary" id="plannerDeleteCancel">Cancel</button>
+        <button class="btn btn-danger" id="plannerDeleteConfirm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlap Warning Overlay -->
+  <div class="planner-overlap-overlay hidden" id="plannerOverlapOverlay">
+    <div class="planner-overlap-backdrop" id="plannerOverlapBackdrop"></div>
+    <div class="planner-overlap-panel">
+      <h4>⚠️ Schedule Conflict</h4>
+      <p id="plannerOverlapMessage">This study block overlaps with an existing session.</p>
+      <div class="planner-overlap-actions">
+        <button class="btn btn-secondary" id="plannerOverlapCancel">Go Back</button>
+        <button class="btn btn-primary" id="plannerOverlapConfirm">Save Anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== END PLANNER OVERLAYS ==================== -->
 
   <nav class="mobile-nav hidden" id="mobileNav">
     <a href="#/home" class="mob-nav-link active" data-page="home">
@@ -702,5 +923,75 @@
     </div>
   </div>
 
+
+  <!-- ==================== ORION CONVERSATION SPACE ==================== -->
+  <div class="orion-space" id="orionSpace">
+    <div class="orion-top-bar">
+      <div class="orion-top-bar-left">
+        <button class="orion-exit-btn" id="orionExitBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          <span>Exit</span>
+        </button>
+      </div>
+      <div class="orion-top-bar-center">Orion</div>
+      <div class="orion-top-bar-right">
+        <button class="orion-chats-btn" id="orionChatsBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Chats</span>
+        </button>
+      </div>
+    </div>
+    <div class="orion-conversation" id="orionConversation"></div>
+    <div class="orion-input-area">
+      <input type="text" id="orionInput" placeholder="Type message..." autocomplete="off">
+      <button class="orion-send-btn" id="orionSendBtn">Send</button>
+    </div>
+  </div>
+
+  <!-- Orion Chat History Sidebar -->
+  <div class="orion-history-backdrop" id="orionHistoryBackdrop"></div>
+  <div class="orion-history-sidebar" id="orionHistorySidebar">
+    <div class="orion-history-header">
+      <h3>Conversations</h3>
+      <button class="orion-new-chat-btn" id="orionNewChatBtn">+ New</button>
+      <button class="btn btn-icon" id="orionCloseHistoryBtn">&#10005;</button>
+    </div>
+    <div class="orion-history-list" id="orionHistoryList"></div>
+  </div>
+  <!-- ==================== END ORION ==================== -->
+
+    <script type="module" src="js/study-ai.js"></script>
+  <script type="module" src="js/orion.js"></script>
+
+  <!-- ==================== STUDY AI WORKSPACE ==================== -->
+  <div class="study-ai-workspace hidden" id="studyAiWorkspace">
+    <div class="study-ai-top-bar">
+      <button class="study-ai-exit" id="studyAiExit">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        <span>Exit</span>
+      </button>
+      <div class="study-ai-title">Ask Orion</div>
+      <button class="study-ai-clear" id="studyAiClear" title="Clear chat">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </button>
+    </div>
+    <div class="study-ai-conversation" id="studyAiConversation"></div>
+    <div class="study-ai-input-area">
+      <input type="text" id="studyAiInput" placeholder="Ask about this document..." autocomplete="off">
+      <button class="study-ai-send" id="studyAiSend">Send</button>
+    </div>
+    <div class="study-ai-quick-actions" id="studyAiQuickActions">
+      <button class="study-ai-quick-btn" data-prompt="Summarize the key points of this document">Summarize</button>
+      <button class="study-ai-quick-btn" data-prompt="Quiz me on this topic">Quiz</button>
+      <button class="study-ai-quick-btn" data-prompt="Explain this topic in simple terms">Explain</button>
+      <button class="study-ai-quick-btn" data-prompt="What are the focus areas I should study?">Focus Areas</button>
+    </div>
+  </div>
+  <!-- ==================== END STUDY AI ==================== -->
 </body>
 </html>

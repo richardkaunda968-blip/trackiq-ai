@@ -31,19 +31,13 @@ import { createCourse, updateCourse, deleteCourse, fetchCourses, createTopic, fe
   }
 
   /* ---------- GREETING HELPER ---------- */
-  function getGreeting() {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
-
   function updatePageSubtitle() {
     const subtitle = document.getElementById('coursesSubtitle');
-    const profile = window.Store.get('profile') || {};
-    const name = profile.display_name || 'Student';
     if (subtitle) {
-      subtitle.textContent = `${getGreeting()}, ${name} — manage your subjects and topics`;
+      window.OrionInjector.updateGreeting(subtitle);
+    }
+    if (window.OrionInjector) {
+      window.OrionInjector.inject('page-courses', 'coursesSubtitle');
     }
   }
 

@@ -1,6 +1,8 @@
 /* ============================================
-   TRACKIQ — FIREBASE CLIENT (v6)
+   ORION — FIREBASE CLIENT (v7)
    Auth + Firestore + Cloudinary + Monthly Reports
+   + Recovery Plans + Chat History + Notification Prefs
+   + User Settings + Quiz Results
    ============================================ */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -33,7 +35,9 @@ import {
   limit,
   addDoc,
   writeBatch,
-  Timestamp
+  Timestamp,
+  startAt,
+  endAt
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -91,7 +95,23 @@ export async function signUp(email, password, displayName) {
     xp: 0,
     level: 1,
     total_study_time: 0,
-    tier: 'balanced'
+    tier: 'balanced',
+    weekly_goal: 15,
+    education_region: 'commonwealth',
+    dnd_auto_enable: true,
+    dnd_allow_break_reminders: true,
+    dnd_allow_orion_notifications: true
+  });
+  // Initialize user settings
+  await setDoc(doc(db, 'user_settings', userCredential.user.uid), {
+    display_name: displayName || '',
+    education_region: 'commonwealth',
+    dnd_auto_enable: true,
+    dnd_allow_break_reminders: true,
+    dnd_allow_orion_notifications: true,
+    notification_enabled: false,
+    reminder_enabled: true,
+    created_at: Timestamp.now()
   });
   return userCredential.user;
 }
@@ -139,6 +159,7 @@ export async function deleteUserAccount(password) {
   const batch = writeBatch(db);
 
   batch.delete(doc(db, 'profiles', userId));
+  batch.delete(doc(db, 'user_settings', userId));
 
   const coursesSnap = await getDocs(query(collection(db, 'courses'), where('user_id', '==', userId)));
   for (const c of coursesSnap.docs) {
@@ -172,6 +193,16 @@ export async function deleteUserAccount(password) {
     batch.delete(doc(db, 'milestones', m.id));
   }
 
+  // Delete new collections
+  const recoverySnap = await getDocs(query(collection(db, 'recovery_plans'), where('user_id', '==', userId)));
+  for (const r of recoverySnap.docs) batch.delete(doc(db, 'recovery_plans', r.id));
+
+  const chatSnap = await getDocs(query(collection(db, 'chat_history'), where('user_id', '==', userId)));
+  for (const c of chatSnap.docs) batch.delete(doc(db, 'chat_history', c.id));
+
+  const quizSnap = await getDocs(query(collection(db, 'quiz_results'), where('user_id', '==', userId)));
+  for (const q of quizSnap.docs) batch.delete(doc(db, 'quiz_results', q.id));
+
   await batch.commit();
   await deleteUser(user);
 }
@@ -191,7 +222,11 @@ export async function getProfile(userId) {
     level: 1,
     total_study_time: 0,
     tier: 'balanced',
-    weekly_goal: 15
+    weekly_goal: 15,
+    education_region: 'commonwealth',
+    dnd_auto_enable: true,
+    dnd_allow_break_reminders: true,
+    dnd_allow_orion_notifications: true
   };
 }
 
@@ -216,6 +251,55 @@ export async function updateProfileData(userId, updates) {
       total_study_time: 0,
       tier: 'balanced',
       weekly_goal: 15,
+      education_region: 'commonwealth',
+      dnd_auto_enable: true,
+      dnd_allow_break_reminders: true,
+      dnd_allow_orion_notifications: true,
+      ...updates
+    });
+  }
+  return updates;
+}
+
+/* ---------- USER SETTINGS ---------- */
+export async function getUserSettings(userId) {
+  const docRef = doc(db, 'user_settings', userId);
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...docSnap.data() };
+  }
+  return {
+    id: userId,
+    display_name: '',
+    education_region: 'commonwealth',
+    dnd_auto_enable: true,
+    dnd_allow_break_reminders: true,
+    dnd_allow_orion_notifications: true,
+    notification_enabled: false,
+    reminder_enabled: true,
+    created_at: Timestamp.now()
+  };
+}
+
+export async function updateUserSettings(userId, updates) {
+  const docRef = doc(db, 'user_settings', userId);
+  const docSnap = await getDoc(docRef);
+  const cleaned = { ...updates };
+  for (const key in cleaned) {
+    if (cleaned[key] === null) cleaned[key] = deleteField();
+  }
+  if (docSnap.exists()) {
+    await updateDoc(docRef, cleaned);
+  } else {
+    await setDoc(docRef, {
+      display_name: '',
+      education_region: 'commonwealth',
+      dnd_auto_enable: true,
+      dnd_allow_break_reminders: true,
+      dnd_allow_orion_notifications: true,
+      notification_enabled: false,
+      reminder_enabled: true,
+      created_at: Timestamp.now(),
       ...updates
     });
   }
@@ -481,12 +565,149 @@ export async function createMilestone(userId, milestoneData) {
   return { id: docRef.id, ...milestoneData };
 }
 
-/* ---------- AI CHAT ---------- */
-export async function sendChatMessage(message, history = []) {
+/* ============================================================
+   RECOVERY PLANS
+   ============================================================ */
+
+export async function fetchRecoveryPlans(userId) {
+  try {
+    const q = query(
+      collection(db, 'recovery_plans'),
+      where('user_id', '==', userId),
+      orderBy('created_at', 'desc'),
+      limit(20)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    if (err.code === 'failed-precondition') {
+      const q = query(collection(db, 'recovery_plans'), where('user_id', '==', userId), limit(20));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    throw err;
+  }
+}
+
+export async function getActiveRecoveryPlan(userId) {
+  const plans = await fetchRecoveryPlans(userId);
+  return plans.find(p => p.status === 'active' || p.status === 'pending');
+}
+
+export async function createRecoveryPlan(userId, planData) {
+  const docRef = await addDoc(collection(db, 'recovery_plans'), {
+    user_id: userId,
+    ...planData,
+    created_at: Timestamp.now(),
+    updated_at: Timestamp.now()
+  });
+  return { id: docRef.id, ...planData };
+}
+
+export async function updateRecoveryPlan(planId, updates) {
+  const docRef = doc(db, 'recovery_plans', planId);
+  await updateDoc(docRef, {
+    ...updates,
+    updated_at: Timestamp.now()
+  });
+  return updates;
+}
+
+export async function dismissRecoveryPlan(planId) {
+  return updateRecoveryPlan(planId, { status: 'dismissed' });
+}
+
+export async function acceptRecoveryPlan(planId) {
+  return updateRecoveryPlan(planId, { status: 'active' });
+}
+
+/* ============================================================
+   CHAT HISTORY (AI Memory)
+   ============================================================ */
+
+export async function fetchChatHistory(userId, limitCount = 50) {
+  try {
+    const q = query(
+      collection(db, 'chat_history'),
+      where('user_id', '==', userId),
+      orderBy('created_at', 'desc'),
+      limit(limitCount)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
+  } catch (err) {
+    if (err.code === 'failed-precondition') {
+      const q = query(collection(db, 'chat_history'), where('user_id', '==', userId), limit(limitCount));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => {
+        const aTime = a.created_at?.toDate?.() || new Date(a.created_at);
+        const bTime = b.created_at?.toDate?.() || new Date(b.created_at);
+        return aTime - bTime;
+      });
+    }
+    throw err;
+  }
+}
+
+export async function saveChatMessage(userId, messageData) {
+  const docRef = await addDoc(collection(db, 'chat_history'), {
+    user_id: userId,
+    ...messageData,
+    created_at: Timestamp.now()
+  });
+  return { id: docRef.id, ...messageData };
+}
+
+export async function clearChatHistory(userId) {
+  const q = query(collection(db, 'chat_history'), where('user_id', '==', userId));
+  const snap = await getDocs(q);
+  const batch = writeBatch(db);
+  snap.docs.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+}
+
+/* ============================================================
+   QUIZ RESULTS (Weakness Tracking)
+   ============================================================ */
+
+export async function fetchQuizResults(userId) {
+  try {
+    const q = query(
+      collection(db, 'quiz_results'),
+      where('user_id', '==', userId),
+      orderBy('created_at', 'desc'),
+      limit(100)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    if (err.code === 'failed-precondition') {
+      const q = query(collection(db, 'quiz_results'), where('user_id', '==', userId), limit(100));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    throw err;
+  }
+}
+
+export async function saveQuizResult(userId, resultData) {
+  const docRef = await addDoc(collection(db, 'quiz_results'), {
+    user_id: userId,
+    ...resultData,
+    created_at: Timestamp.now()
+  });
+  return { id: docRef.id, ...resultData };
+}
+
+/* ============================================================
+   AI CHAT (Enhanced with memory)
+   ============================================================ */
+
+export async function sendChatMessage(message, history = [], context = {}) {
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, history })
+    body: JSON.stringify({ message, history, context })
   });
   if (!response.ok) {
     throw new Error('Chat request failed');
@@ -495,7 +716,7 @@ export async function sendChatMessage(message, history = []) {
 }
 
 /* ============================================================
-   MONTHLY PROGRESS REPORTS — Firestore Helpers
+   MONTHLY PROGRESS REPORTS
    ============================================================ */
 
 export async function fetchMonthlyReports(userId) {
